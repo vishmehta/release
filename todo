@@ -1,4 +1,6 @@
 TODO 
+ - ability to know the tar transferred successfully
+ - move old zips to a new folder and add timestamp
 
 BUGS
  - cant execute eval cd $locationofprojectonserver, only works if ou ftp to the correct location
