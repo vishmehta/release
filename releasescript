@@ -1,0 +1,168 @@
+#!/bin/bash
+
+###Use to log the time taken to execute the script
+START=$(date +%s)
+
+###Change these varaibles
+hostname="xxx.com"													#Hostname
+username="xxx"															#Username
+password="xxx"														#To avoid having to enter password when ssh'ing set up keys at http://www.finiteloops.com/weblog/?p=259												
+locationofproject="xxx"    			#Location of project locally
+tarfile="xxx"														#Choose name to call tar file
+locationofprojectonserver="xxx"	#Location of project on server
+																			#Note: Temporarily moves tar one folder up from locationofprojectonserver
+###Configurable varaibles
+showextralogging=true
+favouritelscommand="ls -lA"
+deleteideahiddenfiles=true
+
+echo "=================================="
+echo "===Deleting old tar if it exists"
+echo "=================================="
+
+eval cd $locationofproject
+rm $tarfile
+
+echo "=================================="
+echo "===Tarring and moving tar"
+echo "=================================="
+
+eval cd $locationofproject
+cd ../
+#if eval zip -r $tarfile $locationofproject; then
+if eval tar -cvf $tarfile -C $locationofproject .; then
+    echo "INFO: Tarred $tarfile"
+else
+    echo 'ERROR: Could not tar folder. Exiting the script... \n'
+    exit 1
+fi
+if eval mv $tarfile $locationofproject; then
+    echo "INFO: $tarfile moved to $locationofproject"
+else
+    echo 'ERROR: Could not move the tar. Exiting the script... \n'
+    exit 1
+fi
+eval cd $locationofproject
+eval echo "Tarred $tarfile and moved to $locationofproject" 
+
+echo "=================================="
+echo "===FTP'ing tar"
+echo "=================================="
+
+#TODO - BUG HERE!!! - cant execute eval cd $locationofprojectonserver
+ftp -in $hostname<<EOF
+quote USER $username
+quote PASS $password
+
+binary
+eval cd $locationofprojectonserver
+delete $tarfile
+cd ../
+delete $tarfile
+put $tarfile
+
+quit
+
+EOF
+
+#TODO - ability to know the tar transferred successfully
+echo "INFO: Tar transferred"
+
+echo "=================================="
+echo "===SSH'ing"
+echo "=================================="
+
+echo "INFO: connecting to $hostname"
+ssh $hostname<<EOF
+
+eval cd $locationofprojectonserver
+if [ "$showextralogging" = true ] ; then
+	echo "DEBUG: Location $locationofprojectonserver"
+	echo "DEBUG: files in location..."
+	eval $favouritelscommand
+fi
+
+echo "=================================="
+echo "===Deleting old files"
+echo "=================================="
+
+rm -rf *
+if [ "$showextralogging" = true ] ; then
+	echo "DEBUG: Location $locationofprojectonserver"
+	echo "DEBUG: files in location..."
+	eval $favouritelscommand
+fi
+echo "INFO: Deleted old files"
+
+echo "=================================="
+echo "===Unzipping"
+echo "=================================="
+
+cd ..
+if [ "$showextralogging" = true ] ; then
+	echo "DEBUG: Location..."
+	pwd
+fi
+if eval mv $tarfile $locationofprojectonserver; then
+    echo "INFO: $tarfile moved to $locationofprojectonserver"
+else
+    echo 'ERROR: Could not move the tar. Exiting the script... \n'
+    exit 1
+fi
+if cd $locationofprojectonserver; then
+    echo "INFO: Moving to $locationofprojectonserver"
+else
+    echo 'ERROR: Could not move to $locationofprojectonserver. Exiting the script... \n'
+    exit 1
+fi
+#if eval unzip $tarfile; then
+if eval tar -xvf $tarfile; then
+    echo "INFO: Untarred $tarfile"
+else
+    echo 'ERROR: Could not untar $tarfile. Exiting the script... \n'
+    exit 1
+fi
+
+if [ "$deleteideahiddenfiles" = true ] ; then
+    echo "=================================="
+	echo "===Deleting .idea crap"
+	echo "=================================="
+	rm -rf .idea
+	echo "DEBUG: Removed hidden .idea folder"
+fi
+
+if [ "$showextralogging" = true ] ; then
+	echo "=================================="
+	echo "===Show status of folder"
+	echo "=================================="
+	echo "DEBUG: Location..."
+	pwd
+	echo "DEBUG: files in location..."
+	eval $favouritelscommand
+fi
+
+logout
+
+EOF
+
+#TODO - move old zips to a new folder and add timestamp
+
+echo "=================================="
+echo "===Deleting temp tar created locally"
+echo "=================================="
+
+eval cd $locationofproject
+if eval rm $tarfile; then
+    echo "INFO: Deleted $tarfile"
+else
+    echo 'ERROR: Could not delete tar. Exiting the script... \n'
+    exit 1
+fi
+
+echo "=================================="
+echo "=================================="
+
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+
+echo "INFO: SCRIPT took $DIFF seconds"
