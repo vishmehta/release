@@ -1,0 +1,129 @@
+#!/bin/bash
+
+START=$(date +%s)
+
+#-------------------------
+#TODO
+#-------------------------
+
+# 1. Delete/Update/Add files (zip location and unzip in ftp location) - allows you to create different version i.e. timestamp
+# 2. Cron job
+# 3. Console output to file
+# 4. Display console output at weblink?
+
+echo "=================================="
+echo "Deleting old tar"
+echo "=================================="
+cd /Users/vishalmehta/PhpstormProjects/Tidbits
+rm tidbits.tar.gz
+echo "Deleted tidbits.tar.gz"
+
+echo "=================================="
+echo "Zipping and moving tar"
+echo "=================================="
+
+cd /Users/vishalmehta/PhpstormProjects/
+#Includes the directory itself
+#tar -zcvf tidbits.tar.gz Tidbits/
+#Doesnt include the directory itself
+#tar -czvf tidbits.tar.gz -C Tidbits .
+tar -cvf tidbits.tar.gz -C Tidbits .
+#tar -czvf tidbits.tar.gz --exclude .* -C Tidbits .
+
+mv tidbits.tar.gz Tidbits
+cd Tidbits
+echo "Tarred tidbits.tar.gz and moved to /Users/vishalmehta/PhpstormProjects/Tidbits"
+
+echo "=================================="
+echo "FTP'ing zip"
+echo "=================================="
+
+#remotefile="/path/to/ftp/server/file.png"
+hostname="XXX.com"
+username="XXX"
+password="XXX"
+ftp -in $hostname<<EOF
+quote USER $username
+quote PASS $password
+
+delete tidbits.tar.gz
+put tidbits.tar.gz
+
+quit
+
+EOF
+
+echo "Tar transferred"
+
+###
+#Depricated
+###
+#ftp -in $hostname<<EOF
+#quote USER $username
+#quote PASS $password
+#binary
+#get $remotefile $HOME/temp/file.png
+#cd tidbits
+#delete test.php
+#delete index.php
+#delete testhtml.html
+#delete testhtml2.html
+#delete tidbits.tar.gz
+#put test.php
+#put index.php
+#put testhtml.html
+#put testhtml2.html
+#put tidbits.tar.gz
+#tar -zxvf tidbits.tar.gz
+#quit
+#EOF
+
+echo "=================================="
+echo "SSH'ing"
+echo "=================================="
+
+ssh $hostname<<EOF
+
+cd html/tidbits/
+pwd
+ls -lA
+
+echo "=================================="
+echo "Deleting old files"
+echo "=================================="
+
+rm *
+ls -lA
+
+echo "Deleted old files"
+
+echo "=================================="
+echo "Unzipping"
+echo "=================================="
+
+cd ..
+pwd
+mv tidbits.tar.gz tidbits
+cd tidbits
+tar -xvf tidbits.tar.gz
+
+echo "=================================="
+echo "Deleting .idea crap"
+echo "=================================="
+
+rm -rf .idea
+ls -lA
+
+logout
+
+EOF
+
+#tar -zxvf tidbits.tar.gz
+
+echo "=================================="
+echo "=================================="
+
+END=$(date +%s)
+DIFF=$(( $END - $START ))
+
+echo "FTP AUTO SCRIPT took $DIFF seconds"
